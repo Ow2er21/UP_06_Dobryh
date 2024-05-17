@@ -1,6 +1,6 @@
 import sys
 import time
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QPushButton, QVBoxLayout, QLabel, QSizePolicy, \
     QHBoxLayout, QStackedWidget
 
@@ -49,6 +49,11 @@ class PlayMode(QWidget):
         self.get_matrix(f'levels\{self.level}.txt')
         self.initUI()
         self.is_selected = False
+        self.time_passed = 0
+        self.timer = QTimer()
+
+        self.timer.timeout.connect(self.update_timer)
+        self.timer.start(1000)
 
     def initUI(self):
         layout = QVBoxLayout()
@@ -63,8 +68,10 @@ class PlayMode(QWidget):
         self.level_label.setMinimumWidth(50)  # Устанавливаем минимальную ширину для надписи с уровнем
         exit_button = QPushButton("Выход")
         exit_button.clicked.connect(self.end_game)
+        self.timer_label = QLabel('Прошло: 0:0')
 
         top_layout.addWidget(self.level_label)
+        top_layout.addWidget(self.timer_label)
         top_layout.addWidget(exit_button)
 
         layout.addWidget(top_panel)
@@ -91,6 +98,12 @@ class PlayMode(QWidget):
             self.buttons.append(row_buttons)
 
         self.update_grid()
+
+    def update_timer(self):
+        self.time_passed += 1
+        secs = self.time_passed % 60
+        mins = self.time_passed // 60
+        self.timer_label.setText(f'Прошло: {mins}:{secs}')
 
     def keyPressEvent(self, event):
         if self.is_selected:
