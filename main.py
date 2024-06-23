@@ -1,4 +1,5 @@
 import sys
+import os
 import time
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QPushButton, QVBoxLayout, QLabel, QSizePolicy, \
@@ -11,7 +12,7 @@ class ResultWindow(QWidget):
         self.time_elapsed = time_elapsed
         self.initUI()
 
-    def initUI(self):
+    def initUI(self): # построение интерфейса
         layout = QVBoxLayout()
 
         levels_label = QLabel(f"Уровней пройдено: {self.levels_passed}")
@@ -28,12 +29,12 @@ class ResultWindow(QWidget):
         self.setLayout(layout)
         self.setWindowTitle("Результаты игры")
 
-    def format_time(self, seconds):
+    def format_time(self, seconds): # форматирование времени в секундах в минуты и секунды
         minutes = int(seconds // 60)
         seconds = int(seconds % 60)
         return f"{minutes} мин. {seconds} сек."
 
-    def return_to_main_menu(self):
+    def return_to_main_menu(self): # возврат в меню
         self.parent().parent().stacked_widget.setCurrentIndex(0)
 
 
@@ -59,7 +60,6 @@ class PlayMode(QWidget):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
-        # Верхняя панель с уровнем и кнопкой выхода
         top_panel = QWidget()
         top_layout = QHBoxLayout()
         top_panel.setLayout(top_layout)
@@ -76,12 +76,10 @@ class PlayMode(QWidget):
 
         layout.addWidget(top_panel)
 
-        # Создаем сетку для игрового поля
         grid_layout = QGridLayout()
         grid_layout.setSpacing(0)
         layout.addLayout(grid_layout)
 
-        # Устанавливаем количество строк и столбцов сетки
         rows = len(self.matrix)
         cols = len(self.matrix[0])
 
@@ -99,13 +97,13 @@ class PlayMode(QWidget):
 
         self.update_grid()
 
-    def update_timer(self):
+    def update_timer(self): #обновление таймера на поле
         self.time_passed += 1
         secs = self.time_passed % 60
         mins = self.time_passed // 60
         self.timer_label.setText(f'Прошло: {mins}:{secs}')
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event): #обработчик нажатий клавиш
         if self.is_selected:
             if event.key() == Qt.Key_W or event.text() == 'ц':
                 self.move_car("Up")
@@ -116,11 +114,11 @@ class PlayMode(QWidget):
             if event.key() == Qt.Key_A or event.text() == 'ф':
                 self.move_car("Left")
 
-    def select_car(self, row, column):
+    def select_car(self, row, column): # функция выбора машины
         self.is_selected = True
         self.selected_car = [[row, column]]
         value = self.matrix[row][column]  # Значение текущей ячейки
-        if value == 1:  # Проверяем соседние ячейки по вертикали
+        if value == 1:  # Проверяем смежные ячейки по вертикали
             for i in range(row - 1, -1, -1):
                 if self.matrix[i][column] == value:
                     self.selected_car.append([i, column])
@@ -146,10 +144,10 @@ class PlayMode(QWidget):
 
         self.selected_car.sort()
 
-    def move_car(self, direction):
+    def move_car(self, direction): # функция пермещения машин
         car_type = self.matrix[self.selected_car[0][0]][self.selected_car[0][1]]
 
-        if car_type == 1:
+        if car_type == 1: # если машина вертикальная
             if direction == "Up" and self.selected_car[0][0] != 0 and 0 == \
                     self.matrix[self.selected_car[0][0] - 1][self.selected_car[0][1]]:
                 for i in range(len(self.selected_car)):
@@ -164,7 +162,7 @@ class PlayMode(QWidget):
                     self.matrix[self.selected_car[i][0]][self.selected_car[i][1]] = 0
                     self.selected_car[i][0] += 1
 
-        elif car_type == 2 or car_type == 3:
+        elif car_type == 2 or car_type == 3: # если машина горизонтальная
             if direction == "Right" and self.selected_car[-1][1] != len(self.matrix[0]) - 1 and (0 == \
                     self.matrix[self.selected_car[-1][0]][self.selected_car[-1][1]+1] or 4 == \
                     self.matrix[self.selected_car[-1][0]][self.selected_car[-1][1]+1]):
@@ -185,7 +183,7 @@ class PlayMode(QWidget):
 
         self.update_grid()
 
-    def update_grid(self):
+    def update_grid(self): # обновление кнопок для соответсвия изменениям
         for i in range(len(self.matrix)):
             for j in range(len(self.matrix[0])):
                 if self.matrix[i][j] == 1:
@@ -201,30 +199,28 @@ class PlayMode(QWidget):
                 else:
                     self.buttons[i][j].setStyleSheet("background-color: gray")
 
-    def lvl_complete(self):
-        print(f'level {self.level} complete')
+    def lvl_complete(self): # завершение уровня
         self.level += 1
         if self.level <= 20:
-            self.get_matrix(f'levels\{self.level}.txt')
-            self.selected_car = []
-            self.is_selected = False
-            self.update_grid()
-            self.level_label.setText(f'Уровень {self.level}')
+            if os.path.exists(f'levels\{self.level}.txt'):
+                self.get_matrix(f'levels\{self.level}.txt')
+                self.selected_car = []
+                self.is_selected = False
+                self.update_grid()
+                self.level_label.setText(f'Уровень {self.level}')
+            else:
+                self.end_game()
         else:
             self.end_game()
 
-    def get_matrix(self, filename):
+    def get_matrix(self, filename): # считывание матрицы уровня из файла
         self.matrix = []
-        try:
-            with open(filename, 'r') as file:
-                for line in file:
-                    row = [int(x) for x in line.strip().split()]
-                    self.matrix.append(row)
-        except:
-            print('File not found')
-            exit()
+        with open(filename, 'r') as file:
+            for line in file:
+                row = [int(x) for x in line.strip().split()]
+                self.matrix.append(row)
 
-    def end_game(self):
+    def end_game(self): # завершение игры
         elapsed_time = time.time() - self.start_time
         levels_passed = self.level - 1
         result_screen = ResultWindow(levels_passed, elapsed_time, self.parent().parent())
@@ -297,18 +293,20 @@ class MainWindow(QWidget):
         self.main_menu = MainMenu()
         self.stacked_widget.addWidget(self.main_menu)
 
-        self.main_menu.play_button.clicked.connect(self.play)
+        self.main_menu.play_button.clicked.connect(self.play) # связывание кнопки с фукнцией
         self.main_menu.rules_button.clicked.connect(self.show_rules)
-        self.main_menu.exit_button.clicked.connect(exit)
+        self.main_menu.exit_button.clicked.connect(lambda: QApplication.quit())
 
         self.show()
 
-    def play(self):
-        self.widget = PlayMode()
-        self.stacked_widget.addWidget(self.widget)
-        self.stacked_widget.setCurrentWidget(self.widget)
+    def play(self): # переключение на игровое поле
+        if os.path.exists(f'levels\{str(1)}.txt'): # format нужен для того, чтобы \1 не считалось спец символом
+            self.widget = PlayMode()
+            self.stacked_widget.addWidget(self.widget)
+            self.stacked_widget.setCurrentWidget(self.widget)
 
-    def show_rules(self):
+
+    def show_rules(self): # переключение на правила
         self.widget = RulesWindow()
         self.stacked_widget.addWidget(self.widget)
         self.stacked_widget.setCurrentWidget(self.widget)
@@ -316,5 +314,5 @@ class MainWindow(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = MainWindow() # Создание экземпляра класса игры
     sys.exit(app.exec_())
